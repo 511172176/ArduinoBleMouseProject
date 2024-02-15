@@ -11,6 +11,7 @@ int gyroZAvg = 0;
 int gyroXSamples[AVG_SAMPLES];
 int gyroZSamples[AVG_SAMPLES];
 int sampleIndex = 0;
+
 float gyroXFiltered = 0;
 float gyroZFiltered = 0;
 const float filterAlpha = 0.2; // 調整濾波係數以提高靈敏度
@@ -98,7 +99,6 @@ void loop() {
     gyroZ = gyroZ / Sensitivity * -1;
 
     // 添加樣本到滑動平均緩衝區
-    addSample(gyroX, gyroZ);
 
     if(bleMouse.isConnected()){
         Serial.print("X 平均值: "); Serial.print(gyroXAvg);

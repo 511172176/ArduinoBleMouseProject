@@ -1,3 +1,5 @@
 {
-    "board": "esp32:esp32:esp32doit-devkit-v1"
+    "board": "esp32:esp32:esp32doit-devkit-v1",
+    "sketch": "ArduinoBleMouseProject.ino",
+    "port": "COM5"
 }
