@@ -3,7 +3,10 @@
 #include <SoftwareSerial.h>
 #include <BleMouse.h>
 #include <WiFi.h>
-#include <PubSubClient.h>
+#include <AsyncMqttClient.h>
+
+//#include <PubSubClient.h>
+
 
 #define AVG_SAMPLES 2 // 減少平均樣本數量以提高反應速度
 #define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
@@ -35,7 +38,8 @@ int delayi = 20;
 
 BleMouse bleMouse;
 WiFiClient espClient;
-PubSubClient client(espClient);
+//PubSubClient client(espClient);
+AsyncMqttClient client;
 
 const uint8_t IMUAddress = 0x68;
 const uint16_t I2C_TIMEOUT = 1000;
@@ -57,20 +61,8 @@ void setup_wifi() {
   Serial.println(WiFi.localIP()); // 獲取並打印IP地址
 }
 
-void reconnect() {
-  while (!client.connected()) { // 當未連接到MQTT伺服器時
-    Serial.print("Attempting MQTT connection...");
-    
-    if (client.connect("ESP32Client")) { // 嘗試連接到MQTT伺服器
-      Serial.println("Connected to MQTT Broker!"); // 連接成功
-      client.subscribe("test/topic"); // 訂閱測試主題
-    } else {
-      Serial.print("Failed, rc="); // 連接失敗
-      Serial.print(client.state()); // 打印連接狀態
-      Serial.println(" try again in 5 seconds"); // 5秒後重試
-      delay(5000); // 延遲5秒
-    }
-  }
+void onMqttConnect(bool sessionPresent) {
+  Serial.println("Connected to MQTT."); // 提示連接成功
 }
 
 void addSample(int gyroX, int gyroZ) {
@@ -118,14 +110,17 @@ void setup() {
     setup_wifi(); // 執行Wi-Fi設置函數
     //WiFi.begin(ssid, password);
     client.setServer(mqtt_server, mqtt_port); // 設置MQTT伺服器和端口
+    client.connect();
+    client.onConnect(onMqttConnect); //成功連線
+    client.onDisconnect([](AsyncMqttClientDisconnectReason reason) { //失敗連線
+      Serial.println("Disconnected from MQTT. Reconnecting...");
+      client.subscribe(topic, 0);
+    });
+    
 }
 
 void loop() {
-    if (!client.connected()) { // 如果未連接到MQTT伺服器
-    reconnect(); // 執行重連函數
-    }
-    client.loop(); // 維持MQTT連接*/
-    
+  
     // 讀取觸摸引腳的值
     int touchValue = touchRead(TOUCH_PIN);
     // 檢測觸摸按下
@@ -165,7 +160,8 @@ void loop() {
         snprintf(attributes, sizeof(attributes), "X: %d   Z: %d Touch: %d", gyroXAvg, gyroZAvg, touchPressed? 1:0);
 
         // 發布消息到MQTT主題
-        client.publish(topic, attributes);
+        size_t len = strlen(attributes); // 獲取長度
+        client.publish(topic, 0, false, attributes, len);
         
         bleMouse.move(gyroZAvg, -gyroXAvg); // 使用平均值進行移動
     }
