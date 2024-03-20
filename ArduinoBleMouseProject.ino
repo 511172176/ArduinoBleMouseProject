@@ -12,11 +12,11 @@
 #define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
 
 // WiFi 參數
-const char* ssid = "HITRON-57F0-2.4G";     // 這裡替換成你的 Wi-Fi SSID
-const char* password = "0229328386"; // 這裡替換成你的 Wi-Fi 密碼
+const char* ssid = "";     // Wi-Fi 帳號
+const char* password = ""; // Wi-Fi 密碼
 
 // MQTT 伺服器參數
-const char* mqtt_server = "192.168.0.196"; // 這裡替換成你的 MQTT 伺服器地址
+const char* mqtt_server = "192.168.0.196"; // MQTT 伺服器地址
 const char* topic = "test/topic"; // 設置MQTT主題
 const int mqtt_port = 1883; // MQTT使用的端口號，標準端口為1883
 
@@ -29,7 +29,7 @@ float gyroXFiltered = 0;
 float gyroZFiltered = 0;
 const float filterAlpha = 0.2; // 調整濾波係數以提高靈敏度
 
-// 在全域範圍內聲明i2cData陣列
+// 在全域範圍內宣告i2cData陣列
 uint8_t i2cData[14];
 int16_t gyroX, gyroZ;
 
@@ -43,22 +43,22 @@ AsyncMqttClient client;
 
 const uint8_t IMUAddress = 0x68;
 const uint16_t I2C_TIMEOUT = 1000;
-bool touchPressed = false; // 用於追蹤觸摸狀態的變量
+bool touchPressed = false; // 用於追蹤觸摸狀態的變數
 
 void setup_wifi() {
   //Serial.begin(115200); // 開始串列通訊
-  Serial.println("Connecting to WiFi..."); // 打印正在連接Wi-Fi
+  Serial.println("Connecting to WiFi..."); // 列印正在連接Wi-Fi
   WiFi.begin(ssid, password); // 使用Wi-Fi名稱和密碼連接
 
   while (WiFi.status() != WL_CONNECTED) { // 等待直到連接成功
     delay(500); // 延遲500毫秒
-    Serial.print("."); // 打印進度
+    Serial.print("."); // 列印進度
   }
 
   Serial.println("");
-  Serial.println("Connected to WiFi!"); // 打印Wi-Fi連接成功
-  Serial.println("IP address: "); // 打印IP地址
-  Serial.println(WiFi.localIP()); // 獲取並打印IP地址
+  Serial.println("Connected to WiFi!"); // 列印Wi-Fi連接成功
+  Serial.println("IP address: "); // 列印IP地址
+  Serial.println(WiFi.localIP()); // 獲取並列印IP地址
 }
 
 void onMqttConnect(bool sessionPresent) {
