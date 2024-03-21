@@ -7,13 +7,12 @@
 
 //#include <PubSubClient.h>
 
-
-#define AVG_SAMPLES 2 // 減少平均樣本數量以提高反應速度
+//#define AVG_SAMPLES 3 // 減少平均樣本數量以提高反應速度,滑動平均濾波使用
 #define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
 
 // WiFi 參數
-const char* ssid = "";     // Wi-Fi 帳號
-const char* password = ""; // Wi-Fi 密碼
+const char* ssid = "HITRON-57F0-2.4G";     // Wi-Fi SSID
+const char* password = "0229328386"; // Wi-Fi 密碼
 
 // MQTT 伺服器參數
 const char* mqtt_server = "192.168.0.196"; // MQTT 伺服器地址
@@ -22,14 +21,13 @@ const int mqtt_port = 1883; // MQTT使用的端口號，標準端口為1883
 
 int gyroXAvg = 0;
 int gyroZAvg = 0;
-int gyroXSamples[AVG_SAMPLES];
-int gyroZSamples[AVG_SAMPLES];
+//int gyroXSamples[AVG_SAMPLES];
+//int gyroZSamples[AVG_SAMPLES];
 int sampleIndex = 0;
 float gyroXFiltered = 0;
 float gyroZFiltered = 0;
-const float filterAlpha = 0.2; // 調整濾波係數以提高靈敏度
-
-// 在全域範圍內宣告i2cData陣列
+const float filterAlpha = 0.2; // 調整濾波係數以提高靈敏度,指數滑动平均滤波器使用
+// 在全域範圍內聲明i2cData陣列
 uint8_t i2cData[14];
 int16_t gyroX, gyroZ;
 
@@ -43,7 +41,7 @@ AsyncMqttClient client;
 
 const uint8_t IMUAddress = 0x68;
 const uint16_t I2C_TIMEOUT = 1000;
-bool touchPressed = false; // 用於追蹤觸摸狀態的變數
+bool touchPressed = false; // 用於追蹤觸摸狀態的變量
 
 void setup_wifi() {
   //Serial.begin(115200); // 開始串列通訊
@@ -58,14 +56,15 @@ void setup_wifi() {
   Serial.println("");
   Serial.println("Connected to WiFi!"); // 列印Wi-Fi連接成功
   Serial.println("IP address: "); // 列印IP地址
-  Serial.println(WiFi.localIP()); // 獲取並列印IP地址
+  Serial.println(WiFi.localIP()); // 獲得並列印IP地址
 }
 
 void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT."); // 提示連接成功
 }
 
-void addSample(int gyroX, int gyroZ) {
+//滑動平均濾波器實現
+/*void addSample(int gyroX, int gyroZ) {
     gyroXSamples[sampleIndex] = gyroX;
     gyroZSamples[sampleIndex] = gyroZ;
     sampleIndex = (sampleIndex + 1) % AVG_SAMPLES;
@@ -78,6 +77,17 @@ void addSample(int gyroX, int gyroZ) {
     }
     gyroXAvg /= AVG_SAMPLES;
     gyroZAvg /= AVG_SAMPLES;
+}*/
+
+// 指數滑動平均濾波器的實現
+void addSample(int gyroX, int gyroZ) {
+    // 更新前一次的平均值
+    gyroXFiltered = filterAlpha * gyroX + (1 - filterAlpha) * gyroXFiltered;
+    gyroZFiltered = filterAlpha * gyroZ + (1 - filterAlpha) * gyroZFiltered;
+
+    // 使用濾波後的值更新全局平均值變數
+    gyroXAvg = gyroXFiltered;
+    gyroZAvg = gyroZFiltered;
 }
 
 uint8_t i2cWrite(uint8_t registerAddress, uint8_t* data, uint8_t length, bool sendStop) {
@@ -121,7 +131,7 @@ void setup() {
 
 void loop() {
   
-    // 讀取觸摸引腳的值
+    // 讀取觸摸針腳的值
     int touchValue = touchRead(TOUCH_PIN);
     // 檢測觸摸按下
     if (touchValue < 40 && !touchPressed) {
@@ -143,27 +153,30 @@ void loop() {
     gyroX = ((i2cData[8] << 8) | i2cData[9]);
     gyroZ = ((i2cData[12] << 8) | i2cData[13]);
 
-    gyroX = gyroX / Sensitivity / 1.1 * -1;
+    gyroX = (gyroX / Sensitivity - 4) * -1;
     gyroZ = gyroZ / Sensitivity * -1;
 
     // 添加樣本到滑動平均緩衝區
     addSample(gyroX, gyroZ);
 
     if(bleMouse.isConnected()){
-        //Serial.print("X 平均值: "); Serial.print(gyroXAvg);
-        //Serial.print("   Z 平均值: "); Serial.println(gyroZAvg);
+        //Serial.println(gyroX);
+        //Serial.println(gyroZ);
+        Serial.print("X 平均值: "); Serial.print(gyroXAvg);
+        Serial.print("   Z 平均值: "); Serial.println(gyroZAvg);
         
         char attributes[100];
 
         // 將數值和文字組合成字串，儲存在char數組中
         // 確保char數組的大小足夠大以儲存完整的訊息
-        snprintf(attributes, sizeof(attributes), "X: %d   Z: %d Touch: %d", gyroXAvg, gyroZAvg, touchPressed? 1:0);
+        snprintf(attributes, sizeof(attributes), "X: %d   Z: %d Touch: %d"
+                                      , gyroXAvg, gyroZAvg, touchPressed? 1:0);
 
         // 發布消息到MQTT主題
-        size_t len = strlen(attributes); // 獲取長度
+        size_t len = strlen(attributes); // 獲得長度
         client.publish(topic, 0, false, attributes, len);
         
-        bleMouse.move(gyroZAvg, -gyroXAvg); // 使用平均值進行移動
+        bleMouse.move(gyroZAvg, gyroXAvg); // 使用平均值進行移動
     }
 
     delay(delayi); // 根據需要調整延時以優化性能
