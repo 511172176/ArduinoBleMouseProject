@@ -11,8 +11,8 @@
 #define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
 
 // WiFi 參數
-const char* ssid = "HITRON-57F0-2.4G";     // Wi-Fi SSID
-const char* password = "0229328386"; // Wi-Fi 密碼
+const char* ssid = "";     // Wi-Fi SSID
+const char* password = ""; // Wi-Fi 密碼
 
 // MQTT 伺服器參數
 const char* mqtt_server = "192.168.0.196"; // MQTT 伺服器地址
