@@ -8,7 +8,8 @@
 //#include <PubSubClient.h>
 
 //#define AVG_SAMPLES 3 // 減少平均樣本數量以提高反應速度,滑動平均濾波使用
-#define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
+//#define TOUCH_PIN T9  // 定義觸摸引腳為T9，實際上對應的是GPIO 32 pin 12
+#define TOUCH_PIN 18
 
 // WiFi 參數
 const char* ssid = "";     // Wi-Fi SSID
@@ -126,21 +127,21 @@ void setup() {
       Serial.println("Disconnected from MQTT. Reconnecting...");
       client.subscribe(topic, 0);
     });
-    
+    pinMode(TOUCH_PIN, INPUT); //D18
 }
 
 void loop() {
   
     // 讀取觸摸針腳的值
-    int touchValue = touchRead(TOUCH_PIN);
+    int touchValue = digitalRead(TOUCH_PIN);
     // 檢測觸摸按下
-    if (touchValue < 40 && !touchPressed) {
+    if (touchValue == HIGH && !touchPressed) {
         //Serial.println("觸摸偵測到，模擬滑鼠按住不放");
         bleMouse.press(MOUSE_LEFT); // 模擬滑鼠左鍵按住不放
         touchPressed = true;
     }
     // 檢測觸摸釋放
-    else if (touchValue >= 40 && touchPressed) {
+    else if (touchValue == LOW && touchPressed) {
         //Serial.println("觸摸釋放，模擬滑鼠釋放");
         bleMouse.release(MOUSE_LEFT); // 模擬滑鼠左鍵釋放
         touchPressed = false;
